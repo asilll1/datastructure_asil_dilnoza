@@ -132,6 +132,30 @@ function Bucket({ numbers, digit, isActive, isCollecting }) {
     );
 }
 
+const radixSortCode = `function radixSort(arr) {
+  function getMax(arr) {
+    return Math.max(...arr);
+  }
+  function getDigit(num, place) {
+    return Math.floor(num / place) % 10;
+  }
+  let max = getMax(arr);
+  for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
+    let buckets = Array.from({ length: 10 }, () => []);
+    for (let i = 0; i < arr.length; i++) {
+      const digit = getDigit(arr[i], exp);
+      buckets[digit].push(arr[i]);
+    }
+    let idx = 0;
+    for (let i = 0; i < 10; i++) {
+      while (buckets[i].length > 0) {
+        arr[idx++] = buckets[i].shift();
+      }
+    }
+  }
+  return arr;
+}`;
+
 export default function RadixSortVisualizer() {
     const [arraySize, setArraySize] = useState(5);
     const [array, setArray] = useState(getRandomArray(5));
@@ -150,6 +174,7 @@ export default function RadixSortVisualizer() {
         const size = Math.max(2, Math.min(10, Number(e.target.value)));
         setArraySize(size);
         setArray(getRandomArray(size));
+        setCustomInput("");
         setInputError("");
     };
 
@@ -163,12 +188,10 @@ export default function RadixSortVisualizer() {
             .split(",")
             .map(s => Number(s.trim()))
             .filter(n => !isNaN(n) && n >= 0 && n <= 999);
-
         if (numbers.length === 0) {
             setInputError("Please enter valid numbers (0-999) separated by commas");
             return;
         }
-
         setArray(numbers);
         setInputError("");
     };
@@ -189,6 +212,16 @@ export default function RadixSortVisualizer() {
     };
 
     const current = steps[step];
+    // Find the current digit step (exp) and total steps
+    let maxDigits = 1;
+    if (array.length > 0) {
+        const max = Math.max(...array);
+        maxDigits = Math.floor(Math.log10(max)) + 1;
+    }
+    let currentDigitStep = 0;
+    if (current && current.exp) {
+        currentDigitStep = Math.log10(current.exp) + 1;
+    }
 
     return (
         <div className="visualizer-fullscreen">
@@ -266,24 +299,35 @@ export default function RadixSortVisualizer() {
             )}
 
             <div style={{ margin: "16px 0", textAlign: "center", color: "#4a4e69", fontWeight: "bold" }}>
-                {current.message}
+                {current.exp && (
+                    <span>
+                        Step {currentDigitStep} of {maxDigits}: Sorting by {current.exp === 1 ? "ones" : current.exp === 10 ? "tens" : "hundreds"} place
+                    </span>
+                )}
+                {!current.exp && current.phase === "done" && <span>Sorting complete!</span>}
             </div>
 
-            <div className="visualizer-array" style={{ marginBottom: 24 }}>
+            <div className="visualizer-array" style={{ alignItems: "end", marginBottom: 24 }}>
                 {current.array.map((num, idx) => (
-                    <div
-                        key={idx}
-                        className="visualizer-bar"
-                        style={{
-                            height: (num / 999) * 180 + 20,
-                            width: 44,
-                            background: current.phase === "done" ? "#8bc34a" : "#a3cef1",
-                            color: "#22223b",
-                            fontSize: "1.1rem",
-                            transition: "all 0.3s ease"
-                        }}
-                    >
-                        {num}
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div
+                            className="visualizer-bar"
+                            style={{
+                                height: (num / 999) * 180 + 20,
+                                width: 44,
+                                background: current.phase === "done" ? "#8bc34a" : "#a3cef1",
+                                color: "#22223b",
+                                fontSize: "1.1rem",
+                                display: "flex",
+                                alignItems: "flex-end",
+                                justifyContent: "center",
+                                borderRadius: 6,
+                                marginBottom: 2
+                            }}
+                        >
+                            {num}
+                        </div>
+                        <div style={{ color: "#4a4e69", fontSize: 13, fontWeight: 500 }}>{idx}</div>
                     </div>
                 ))}
             </div>
@@ -324,6 +368,12 @@ export default function RadixSortVisualizer() {
                 >
                     Next
                 </button>
+            </div>
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Radix Sort (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{radixSortCode}
+                </pre>
             </div>
         </div>
     );

@@ -24,6 +24,26 @@ function insertNode(root, value, path = []) {
     return { node: root, path };
 }
 
+// Delete value from BST
+function deleteNode(root, value) {
+    if (!root) return null;
+    if (value < root.value) {
+        return { ...root, left: deleteNode(root.left, value) };
+    } else if (value > root.value) {
+        return { ...root, right: deleteNode(root.right, value) };
+    } else {
+        if (!root.left) return root.right;
+        if (!root.right) return root.left;
+        let minLargerNode = root.right;
+        while (minLargerNode.left) minLargerNode = minLargerNode.left;
+        return {
+            value: minLargerNode.value,
+            left: root.left,
+            right: deleteNode(root.right, minLargerNode.value)
+        };
+    }
+}
+
 // Traverse tree to get nodes with positions for SVG
 function getTreeLayout(root, x = 300, y = 40, dx = 80, depth = 0, nodes = [], edges = []) {
     if (!root) return { nodes, edges };
@@ -50,6 +70,7 @@ function getRandomValues(size, min = 1, max = 99) {
 }
 
 export default function BSTConstructionVisualizer() {
+    const [treeSize, setTreeSize] = useState(6);
     const [values, setValues] = useState(getRandomValues(6));
     const [customInput, setCustomInput] = useState("");
     const [step, setStep] = useState(0);
@@ -57,6 +78,18 @@ export default function BSTConstructionVisualizer() {
     const [paths, setPaths] = useState([]);
     const [isAnimating, setIsAnimating] = useState(false);
     const [inputError, setInputError] = useState("");
+    const [insertInput, setInsertInput] = useState("");
+    const [deleteInput, setDeleteInput] = useState("");
+
+    // Update values when tree size changes
+    React.useEffect(() => {
+        if (treeSize > 0) {
+            setValues(getRandomValues(treeSize));
+            setStep(0);
+            setBST(null);
+            setPaths([]);
+        }
+    }, [treeSize]);
 
     // Build BST up to current step and record paths
     React.useEffect(() => {
@@ -73,12 +106,19 @@ export default function BSTConstructionVisualizer() {
     }, [step, values]);
 
     const handleRandom = () => {
-        setValues(getRandomValues(6));
+        setValues(getRandomValues(treeSize));
         setStep(0);
         setBST(null);
         setPaths([]);
         setCustomInput("");
         setInputError("");
+    };
+
+    const handleSizeChange = (e) => {
+        const size = parseInt(e.target.value);
+        if (size > 0 && size <= 20) {
+            setTreeSize(size);
+        }
     };
 
     const handleAutoPlay = async () => {
@@ -112,6 +152,32 @@ export default function BSTConstructionVisualizer() {
         setInputError("");
     };
 
+    // Single insert
+    const handleSingleInsert = () => {
+        const value = parseInt(insertInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to insert");
+            return;
+        }
+        const newBST = insertNode(bst, value).node;
+        setBST(newBST);
+        setInsertInput("");
+        setInputError("");
+    };
+
+    // Single delete
+    const handleSingleDelete = () => {
+        const value = parseInt(deleteInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to delete");
+            return;
+        }
+        const newBST = deleteNode(bst, value);
+        setBST(newBST);
+        setDeleteInput("");
+        setInputError("");
+    };
+
     // Layout for SVG
     const { nodes, edges } = getTreeLayout(bst);
 
@@ -136,11 +202,29 @@ export default function BSTConstructionVisualizer() {
                             marginRight: 8
                         }}
                     >
-            {v}
-          </span>
+                        {v}
+                    </span>
                 ))}
             </div>
             <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label>Tree Size:</label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={treeSize}
+                        onChange={handleSizeChange}
+                        style={{
+                            width: 60,
+                            borderRadius: 4,
+                            border: "1px solid #bfc0c0",
+                            padding: "4px 8px",
+                            fontSize: "1rem"
+                        }}
+                        disabled={isAnimating}
+                    />
+                </div>
                 <button
                     className="visualizer-btn"
                     onClick={() => setStep((s) => Math.max(0, s - 1))}
@@ -175,8 +259,7 @@ export default function BSTConstructionVisualizer() {
                         borderRadius: 4,
                         border: "1px solid #bfc0c0",
                         padding: "4px 8px",
-                        fontSize: "1rem",
-                        marginLeft: 8
+                        fontSize: "1rem"
                     }}
                     disabled={isAnimating}
                 />
@@ -186,6 +269,39 @@ export default function BSTConstructionVisualizer() {
                     disabled={isAnimating}
                 >
                     Set Sequence
+                </button>
+            </div>
+            {/* Single Insert/Delete Controls */}
+            <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                <input
+                    type="text"
+                    placeholder="Insert value"
+                    value={insertInput || ""}
+                    onChange={e => setInsertInput(e.target.value.replace(/[^0-9,-]/g, ""))}
+                    style={{ width: 120, borderRadius: 4, border: "1px solid #bfc0c0", padding: "4px 8px", fontSize: "1rem" }}
+                    disabled={isAnimating}
+                />
+                <button
+                    className="visualizer-btn"
+                    onClick={handleSingleInsert}
+                    disabled={isAnimating || !insertInput}
+                >
+                    Insert
+                </button>
+                <input
+                    type="text"
+                    placeholder="Delete value"
+                    value={deleteInput || ""}
+                    onChange={e => setDeleteInput(e.target.value.replace(/[^0-9,-]/g, ""))}
+                    style={{ width: 120, borderRadius: 4, border: "1px solid #bfc0c0", padding: "4px 8px", fontSize: "1rem" }}
+                    disabled={isAnimating}
+                />
+                <button
+                    className="visualizer-btn"
+                    onClick={handleSingleDelete}
+                    disabled={isAnimating || !deleteInput}
+                >
+                    Delete
                 </button>
             </div>
             {inputError && (
@@ -244,16 +360,32 @@ export default function BSTConstructionVisualizer() {
                         ? `Inserting ${values[step - 1]}`
                         : "BST construction complete!"}
             </div>
-            <div>
-                <h4 style={{ color: "#4a4e69", marginTop: 32, marginBottom: 8 }}>BST Insertion (JavaScript)</h4>
-                <pre className="visualizer-code">
+            {/* Styled Code Block */}
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>BST Insertion & Deletion (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
 {`function insertNode(root, value) {
   if (!root) return { value, left: null, right: null };
   if (value < root.value) root.left = insertNode(root.left, value);
   else if (value > root.value) root.right = insertNode(root.right, value);
   return root;
+}
+
+function deleteNode(root, value) {
+  if (!root) return null;
+  if (value < root.value) root.left = deleteNode(root.left, value);
+  else if (value > root.value) root.right = deleteNode(root.right, value);
+  else {
+    if (!root.left) return root.right;
+    if (!root.right) return root.left;
+    let minLargerNode = root.right;
+    while (minLargerNode.left) minLargerNode = minLargerNode.left;
+    root.value = minLargerNode.value;
+    root.right = deleteNode(root.right, minLargerNode.value);
+  }
+  return root;
 }`}
-        </pre>
+                </pre>
             </div>
         </div>
     );

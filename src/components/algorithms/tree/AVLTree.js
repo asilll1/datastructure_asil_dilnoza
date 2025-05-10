@@ -292,7 +292,8 @@ function getTreeLayout(root, x = 300, y = 40, dx = 80, depth = 0, nodes = [], ed
         depth,
         left: root.left ? root.left.key : null,
         right: root.right ? root.right.key : null,
-        height: root.height
+        height: root.height,
+        bf: getBalance(root)
     });
 
     if (root.left) {
@@ -364,6 +365,9 @@ export default function AVLTreeVisualizer() {
     const [treeStructure, setTreeStructure] = useState(null);
     const [activeNodes, setActiveNodes] = useState(new Set());
     const [activeEdges, setActiveEdges] = useState(new Set());
+    const [currentRoot, setCurrentRoot] = useState(null);
+    const [insertInput, setInsertInput] = useState("");
+    const [deleteSingleInput, setDeleteSingleInput] = useState("");
 
     useEffect(() => {
         if (treeSize > 0) {
@@ -390,6 +394,7 @@ export default function AVLTreeVisualizer() {
         
         setSteps(allSteps);
         setStep(0);
+        setCurrentRoot(root);
     }, [values, operation, deleteInput]);
 
     useEffect(() => {
@@ -466,8 +471,28 @@ export default function AVLTreeVisualizer() {
             setInputError("Please enter a valid number to delete");
             return;
         }
+        
+        // Create a new steps array for this deletion
+        const deletionSteps = [];
+        let root = null;
+        
+        // First build the tree
+        for (let i = 0; i < values.length; i++) {
+            root = insert(root, values[i], []);
+        }
+        
+        // Then perform deletion
+        root = deleteNode(root, value, deletionSteps);
+        
+        // Update all necessary state
+        setSteps(deletionSteps);
+        setStep(0);
+        setCurrentRoot(root);
         setOperation("delete");
         setInputError("");
+        
+        // Update values array to reflect the deletion
+        setValues(prevValues => prevValues.filter(v => v !== value));
     };
 
     const handleSizeChange = (e) => {
@@ -475,6 +500,42 @@ export default function AVLTreeVisualizer() {
         if (size > 0 && size <= 20) {
             setTreeSize(size);
         }
+    };
+
+    const handleSingleInsert = () => {
+        if (!insertInput) return;
+        const value = parseInt(insertInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to insert");
+            return;
+        }
+        const newRoot = insert(currentRoot, value);
+        setCurrentRoot(newRoot);
+        setInsertInput("");
+        setInputError("");
+    };
+
+    const handleSingleDelete = () => {
+        if (!deleteSingleInput) return;
+        const value = parseInt(deleteSingleInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to delete");
+            return;
+        }
+        
+        // Create a new steps array for this deletion
+        const deletionSteps = [];
+        const newRoot = deleteNode(currentRoot, value, deletionSteps);
+        
+        // Update all necessary state
+        setCurrentRoot(newRoot);
+        setSteps(deletionSteps);
+        setStep(0);
+        setDeleteSingleInput("");
+        setInputError("");
+        
+        // Update values array to reflect the deletion
+        setValues(prevValues => prevValues.filter(v => v !== value));
     };
 
     const currentStep = steps[step - 1] || { tree: null, highlight: [], rotationNodes: [], action: "" };
@@ -560,30 +621,6 @@ export default function AVLTreeVisualizer() {
                         Set Sequence
                     </button>
                 </div>
-
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                        type="text"
-                        placeholder="Value to delete"
-                        value={deleteInput}
-                        onChange={(e) => setDeleteInput(e.target.value)}
-                        style={{
-                            width: 120,
-                            borderRadius: 4,
-                            border: "1px solid #bfc0c0",
-                            padding: "4px 8px",
-                            fontSize: "1rem"
-                        }}
-                        disabled={isAnimating}
-                    />
-                    <button
-                        className="visualizer-btn"
-                        onClick={handleDelete}
-                        disabled={isAnimating}
-                    >
-                        Delete
-                    </button>
-                </div>
             </div>
 
             {inputError && (
@@ -651,7 +688,7 @@ export default function AVLTreeVisualizer() {
                                 fontSize: "0.7rem",
                                 color: "#666"
                             }}>
-                                h:{node.height}
+                                bf:{node.bf}
                             </div>
                         </div>
                     );
@@ -683,6 +720,60 @@ export default function AVLTreeVisualizer() {
                         </span>
                     ))}
                 </div>
+            </div>
+
+            {/* Styled Code Block */}
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>AVL Tree Insertion & Deletion (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{`function insert(node, key) {
+  if (!node) return new Node(key);
+  if (key < node.key) node.left = insert(node.left, key);
+  else if (key > node.key) node.right = insert(node.right, key);
+  else return node;
+  node.height = 1 + Math.max(height(node.left), height(node.right));
+  let balance = getBalance(node);
+  if (balance > 1 && key < node.left.key) return rightRotate(node);
+  if (balance < -1 && key > node.right.key) return leftRotate(node);
+  if (balance > 1 && key > node.left.key) {
+    node.left = leftRotate(node.left);
+    return rightRotate(node);
+  }
+  if (balance < -1 && key < node.right.key) {
+    node.right = rightRotate(node.right);
+    return leftRotate(node);
+  }
+  return node;
+}
+
+function deleteNode(root, key) {
+  if (!root) return root;
+  if (key < root.key) root.left = deleteNode(root.left, key);
+  else if (key > root.key) root.right = deleteNode(root.right, key);
+  else {
+    if (!root.left || !root.right) root = root.left || root.right;
+    else {
+      let temp = minValueNode(root.right);
+      root.key = temp.key;
+      root.right = deleteNode(root.right, temp.key);
+    }
+  }
+  if (!root) return root;
+  root.height = 1 + Math.max(height(root.left), height(root.right));
+  let balance = getBalance(root);
+  if (balance > 1 && getBalance(root.left) >= 0) return rightRotate(root);
+  if (balance > 1 && getBalance(root.left) < 0) {
+    root.left = leftRotate(root.left);
+    return rightRotate(root);
+  }
+  if (balance < -1 && getBalance(root.right) <= 0) return leftRotate(root);
+  if (balance < -1 && getBalance(root.right) > 0) {
+    root.right = rightRotate(root.right);
+    return leftRotate(root);
+  }
+  return root;
+}`}
+                </pre>
             </div>
         </div>
     );

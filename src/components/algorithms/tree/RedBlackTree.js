@@ -523,6 +523,10 @@ export default function RedBlackTreeVisualizer() {
     const [isAnimating, setIsAnimating] = useState(false);
     const [inputError, setInputError] = useState("");
     const [operation, setOperation] = useState("insert");
+    const [currentRoot, setCurrentRoot] = useState(null);
+    const [currentValues, setCurrentValues] = useState([]);
+    const [insertInput, setInsertInput] = useState("");
+    const [deleteSingleInput, setDeleteSingleInput] = useState("");
 
     useEffect(() => {
         if (treeSize > 0) {
@@ -607,6 +611,47 @@ export default function RedBlackTreeVisualizer() {
     const currentStep = steps[step - 1] || { tree: null, highlight: [], action: "" };
     const { nodes, edges } = getTreeLayout(currentStep.tree);
 
+    const handleSingleInsert = () => {
+        if (!insertInput) return;
+        const value = parseInt(insertInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to insert");
+            return;
+        }
+        let tree = currentRoot ? Object.assign(new RBTree(), { root: deepCloneRB(currentRoot) }) : new RBTree();
+        let steps = [];
+        tree.insert(value, steps);
+        setCurrentRoot(tree.root);
+        setInsertInput("");
+        setInputError("");
+    };
+
+    const handleSingleDelete = () => {
+        if (!deleteSingleInput) return;
+        const value = parseInt(deleteSingleInput);
+        if (isNaN(value)) {
+            setInputError("Please enter a valid number to delete");
+            return;
+        }
+        let tree = currentRoot ? Object.assign(new RBTree(), { root: deepCloneRB(currentRoot) }) : new RBTree();
+        let steps = [];
+        tree.deleteByVal(value, steps);
+        setCurrentRoot(tree.root);
+        setDeleteSingleInput("");
+        setInputError("");
+    };
+
+    function deepCloneRB(node) {
+        if (!node) return null;
+        return {
+            val: node.val,
+            color: node.color,
+            left: deepCloneRB(node.left),
+            right: deepCloneRB(node.right),
+            parent: null // parent will be set by RBTree logic
+        };
+    }
+
     return (
         <div className="visualizer-fullscreen">
             <div className="visualizer-title">Red-Black Tree Operations</div>
@@ -687,30 +732,6 @@ export default function RedBlackTreeVisualizer() {
                     Set Sequence
                 </button>
             </div>
-
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                        type="text"
-                        placeholder="Value to delete"
-                        value={deleteInput}
-                        onChange={(e) => setDeleteInput(e.target.value)}
-                        style={{
-                            width: 120,
-                            borderRadius: 4,
-                            border: "1px solid #bfc0c0",
-                            padding: "4px 8px",
-                            fontSize: "1rem"
-                        }}
-                        disabled={isAnimating}
-                    />
-                    <button
-                        className="visualizer-btn"
-                        onClick={handleDelete}
-                        disabled={isAnimating}
-                    >
-                        Delete
-                    </button>
-                </div>
             </div>
 
             {inputError && (
@@ -795,6 +816,26 @@ export default function RedBlackTreeVisualizer() {
                         </span>
                     ))}
                 </div>
+            </div>
+
+            {/* Styled Code Block */}
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Red-Black Tree Insertion & Deletion (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{`// Insertion and deletion in Red-Black Tree is complex.
+// Here is a simplified version of the main steps:
+
+function insert(root, key) {
+  // Standard BST insert, then fix violations
+}
+
+function deleteNode(root, key) {
+  // Standard BST delete, then fix violations
+}
+
+// Fixing violations involves rotations and recoloring.
+// See the full implementation in the visualizer source!`}
+        </pre>
             </div>
         </div>
     );

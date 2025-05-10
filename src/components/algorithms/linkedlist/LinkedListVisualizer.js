@@ -1,8 +1,15 @@
 import React, { useState } from "react";
 
+let nodeIdCounter = 1;
+function generateAddress() {
+    // Simulate a memory address (hex string)
+    return "0x" + (nodeIdCounter++).toString(16).padStart(4, "0");
+}
+
 class Node {
-    constructor(value) {
-        this.value = value;
+    constructor(data) {
+        this.data = data;
+        this.address = generateAddress();
         this.next = null;
     }
 }
@@ -17,16 +24,16 @@ class LinkedList {
         return this.size === 0;
     }
 
-    insertAtBeginning(value) {
-        const newNode = new Node(value);
+    insertAtBeginning(data) {
+        const newNode = new Node(data);
         newNode.next = this.head;
         this.head = newNode;
         this.size++;
         return this.getState();
     }
 
-    insertAtEnd(value) {
-        const newNode = new Node(value);
+    insertAtEnd(data) {
+        const newNode = new Node(data);
         if (this.isEmpty()) {
             this.head = newNode;
         } else {
@@ -40,35 +47,35 @@ class LinkedList {
         return this.getState();
     }
 
-    insertAfter(value, afterValue) {
+    insertAfter(data, afterValue) {
         if (this.isEmpty()) {
             throw new Error("List is empty");
         }
         let current = this.head;
-        while (current && current.value !== afterValue) {
+        while (current && current.data !== afterValue) {
             current = current.next;
         }
         if (!current) {
             throw new Error("Value not found");
         }
-        const newNode = new Node(value);
+        const newNode = new Node(data);
         newNode.next = current.next;
         current.next = newNode;
         this.size++;
         return this.getState();
     }
 
-    delete(value) {
+    delete(data) {
         if (this.isEmpty()) {
             throw new Error("List is empty");
         }
-        if (this.head.value === value) {
+        if (this.head.data === data) {
             this.head = this.head.next;
             this.size--;
             return this.getState();
         }
         let current = this.head;
-        while (current.next && current.next.value !== value) {
+        while (current.next && current.next.data !== data) {
             current = current.next;
         }
         if (!current.next) {
@@ -79,11 +86,11 @@ class LinkedList {
         return this.getState();
     }
 
-    search(value) {
+    search(data) {
         let current = this.head;
         let index = 0;
         while (current) {
-            if (current.value === value) {
+            if (current.data === data) {
                 return { found: true, index };
             }
             current = current.next;
@@ -96,7 +103,11 @@ class LinkedList {
         const nodes = [];
         let current = this.head;
         while (current) {
-            nodes.push(current.value);
+            nodes.push({
+                data: current.data,
+                address: current.address,
+                nextAddress: current.next ? current.next.address : null
+            });
             current = current.next;
         }
         return {
@@ -276,10 +287,12 @@ function LinkedListVisualizer() {
 
             <div className="linked-list-container">
                 <div className="linked-list">
-                    {currentState.nodes.map((value, index) => (
+                    {currentState.nodes.map((node, index) => (
                         <div key={index} className="node-container">
-                            <div className={`node ${currentState.operation === "search" && currentState.searchResult?.index === index ? "highlight" : ""}`}>
-                                {value}
+                            <div className={`node-box ${currentState.operation === "search" && currentState.searchResult?.index === index ? "highlight" : ""}`}>
+                                <div className="node-data">{node.data}</div>
+                                <div className="node-address">{node.address}</div>
+                                <div className="node-next">→ {node.nextAddress || "null"}</div>
                             </div>
                             {index < currentState.nodes.length - 1 && (
                                 <div className="arrow">→</div>
@@ -339,23 +352,39 @@ function LinkedListVisualizer() {
                     align-items: center;
                 }
 
-                .node {
-                    width: 60px;
-                    height: 60px;
+                .node-box {
+                    width: 90px;
+                    height: 70px;
                     border: 2px solid #4a4e69;
                     border-radius: 8px;
                     display: flex;
+                    flex-direction: column;
                     align-items: center;
                     justify-content: center;
                     background: #a3cef1;
                     color: #22223b;
                     font-weight: bold;
                     position: relative;
+                    font-size: 1rem;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
                 }
 
-                .node.highlight {
+                .node-box.highlight {
                     background: #8bc34a;
                     color: white;
+                }
+
+                .node-data {
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                }
+                .node-address {
+                    font-size: 0.8rem;
+                    color: #4a4e69;
+                }
+                .node-next {
+                    font-size: 0.8rem;
+                    color: #1976d2;
                 }
 
                 .arrow {

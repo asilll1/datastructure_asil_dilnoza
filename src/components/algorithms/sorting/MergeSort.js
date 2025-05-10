@@ -127,13 +127,37 @@ function LegendItem({ color, label }) {
     );
 }
 
+const mergeSortCode = `function mergeSort(arr, order = "asc") {
+  const compare = order === "asc"
+    ? (x, y) => x <= y
+    : (x, y) => x >= y;
+  function mergeSortRec(a, l, r) {
+    if (l >= r) return;
+    const m = Math.floor((l + r) / 2);
+    mergeSortRec(a, l, m);
+    mergeSortRec(a, m + 1, r);
+    let left = a.slice(l, m + 1), right = a.slice(m + 1, r + 1);
+    let i = 0, j = 0, k = l;
+    while (i < left.length && j < right.length) {
+      if (compare(left[i], right[j])) a[k++] = left[i++];
+      else a[k++] = right[j++];
+    }
+    while (i < left.length) a[k++] = left[i++];
+    while (j < right.length) a[k++] = right[j++];
+  }
+  mergeSortRec(arr, 0, arr.length - 1);
+  return arr;
+}`;
+
 export default function MergeSortVisualizer() {
     const [arraySize, setArraySize] = useState(7);
     const [array, setArray] = useState(getRandomArray(7));
+    const [customInput, setCustomInput] = useState("");
     const [order, setOrder] = useState("asc");
     const [steps, setSteps] = useState(mergeSortSteps(array, order));
     const [step, setStep] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [inputError, setInputError] = useState("");
 
     React.useEffect(() => {
         setSteps(mergeSortSteps(array, order));
@@ -144,10 +168,32 @@ export default function MergeSortVisualizer() {
         const size = Math.max(2, Math.min(12, Number(e.target.value)));
         setArraySize(size);
         setArray(getRandomArray(size));
+        setCustomInput("");
+        setInputError("");
     };
 
     const handleRandomize = () => {
         setArray(getRandomArray(arraySize));
+        setCustomInput("");
+        setInputError("");
+    };
+
+    const handleCustomInput = (e) => {
+        setCustomInput(e.target.value);
+        setInputError("");
+    };
+
+    const handleSetCustomArray = () => {
+        const numbers = customInput
+            .split(",")
+            .map(s => Number(s.trim()))
+            .filter(n => !isNaN(n) && n >= 0 && n <= 99);
+        if (numbers.length === 0) {
+            setInputError("Please enter valid numbers (0-99) separated by commas");
+            return;
+        }
+        setArray(numbers);
+        setInputError("");
     };
 
     const handleOrderChange = (e) => {
@@ -176,28 +222,53 @@ export default function MergeSortVisualizer() {
                 </b>
             </div>
             <Legend />
-            <div className="visualizer-controls">
-                <label>
-                    <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+            <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 16 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label>
+                        <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+                        <input
+                            type="number"
+                            min={2}
+                            max={12}
+                            value={arraySize}
+                            onChange={handleArraySizeChange}
+                            disabled={isAnimating}
+                            style={{
+                                width: 50,
+                                borderRadius: 4,
+                                border: "1px solid #bfc0c0",
+                                padding: "4px 8px",
+                                fontSize: "1rem"
+                            }}
+                        />
+                    </label>
+                    <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
+                        Randomize
+                    </button>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
-                        type="number"
-                        min={2}
-                        max={12}
-                        value={arraySize}
-                        onChange={handleArraySizeChange}
+                        type="text"
+                        placeholder="Enter numbers (e.g., 5, 2, 9)"
+                        value={customInput}
+                        onChange={handleCustomInput}
                         disabled={isAnimating}
                         style={{
-                            width: 50,
+                            width: 200,
                             borderRadius: 4,
                             border: "1px solid #bfc0c0",
                             padding: "4px 8px",
                             fontSize: "1rem"
                         }}
                     />
-                </label>
-                <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
-                    Randomize
-                </button>
+                    <button
+                        className="visualizer-btn"
+                        onClick={handleSetCustomArray}
+                        disabled={isAnimating}
+                    >
+                        Set Array
+                    </button>
+                </div>
                 <label style={{ marginLeft: 16, color: "#4a4e69", fontWeight: 500 }}>
                     Order:&nbsp;
                     <select
@@ -223,7 +294,12 @@ export default function MergeSortVisualizer() {
                     Auto Play
                 </button>
             </div>
-            <div className="visualizer-array">
+            {inputError && (
+                <div style={{ color: "#d32f2f", fontWeight: "bold", margin: "8px 0" }}>
+                    {inputError}
+                </div>
+            )}
+            <div className="visualizer-array" style={{ alignItems: "end", marginBottom: 16 }}>
                 {current.array.map((num, idx) => {
                     let color = "#a3cef1";
                     if (current.highlight && current.highlight.left && current.highlight.left.includes(idx)) color = "#ffb703";
@@ -231,18 +307,25 @@ export default function MergeSortVisualizer() {
                     if (current.highlight && current.highlight.merged && current.highlight.merged.includes(idx)) color = "#fb8500";
                     if (step === steps.length - 1) color = "#8bc34a";
                     return (
-                        <div
-                            key={idx}
-                            className="visualizer-bar"
-                            style={{
-                                height: num * 3 + 20,
-                                width: 34,
-                                background: color,
-                                color: "#22223b",
-                                fontSize: "1.1rem"
-                            }}
-                        >
-                            {num}
+                        <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div
+                                className="visualizer-bar"
+                                style={{
+                                    height: num * 3 + 20,
+                                    width: 34,
+                                    background: color,
+                                    color: "#22223b",
+                                    fontSize: "1.1rem",
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    justifyContent: "center",
+                                    borderRadius: 6,
+                                    marginBottom: 2
+                                }}
+                            >
+                                {num}
+                            </div>
+                            <div style={{ color: "#4a4e69", fontSize: 13, fontWeight: 500 }}>{idx}</div>
                         </div>
                     );
                 })}
@@ -263,31 +346,11 @@ export default function MergeSortVisualizer() {
                     Next
                 </button>
             </div>
-            <div>
-                <h4 style={{ color: "#4a4e69", marginTop: 32, marginBottom: 8 }}>Merge Sort (JavaScript)</h4>
-                <pre className="visualizer-code">
-{`function mergeSort(arr, order = "asc") {
-  const compare = order === "asc"
-    ? (x, y) => x <= y
-    : (x, y) => x >= y;
-  function mergeSortRec(a, l, r) {
-    if (l >= r) return;
-    const m = Math.floor((l + r) / 2);
-    mergeSortRec(a, l, m);
-    mergeSortRec(a, m + 1, r);
-    let left = a.slice(l, m + 1), right = a.slice(m + 1, r + 1);
-    let i = 0, j = 0, k = l;
-    while (i < left.length && j < right.length) {
-      if (compare(left[i], right[j])) a[k++] = left[i++];
-      else a[k++] = right[j++];
-    }
-    while (i < left.length) a[k++] = left[i++];
-    while (j < right.length) a[k++] = right[j++];
-  }
-  mergeSortRec(arr, 0, arr.length - 1);
-  return arr;
-}`}
-        </pre>
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Merge Sort (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{mergeSortCode}
+                </pre>
             </div>
         </div>
     );

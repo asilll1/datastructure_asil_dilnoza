@@ -61,8 +61,7 @@ const topics = [
         label: "Linked List",
         children: [
             { label: "Singly Linked List", path: "/linkedlist" },
-            { label: "Doubly Linked List", path: "/linkedlist/double" },
-            { label: "Circular Linked List", path: "/linkedlist/circular" }
+            { label: "Doubly Linked List", path: "/linkedlist/double" }
         ]
     },
 ];

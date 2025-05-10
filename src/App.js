@@ -27,7 +27,7 @@ import PrimsVisualizer from "./components/algorithms/graph/Prims";
 import GraphRepresentationVisualizer from "./components/algorithms/graph/GraphRepresentation";
 import LinkedListVisualizer from "./components/algorithms/linkedlist/LinkedListVisualizer";
 import DoubleLinkedListVisualizer from "./components/algorithms/linkedlist/DoubleLinkedListVisualizer";
-import CircularLinkedListVisualizer from "./components/algorithms/linkedlist/CircularLinkedListVisualizer";
+// import CircularLinkedListVisualizer from "./components/algorithms/linkedlist/CircularLinkedListVisualizer";
 // (Import more as you add them)
 
 function App() {
@@ -63,7 +63,7 @@ function App() {
                             <Route path="/graph/representation" element={<GraphRepresentationVisualizer />} />
                             <Route path="/linkedlist" element={<LinkedListVisualizer />} />
                             <Route path="/linkedlist/double" element={<DoubleLinkedListVisualizer />} />
-                            <Route path="/linkedlist/circular" element={<CircularLinkedListVisualizer />} />
+                            {/* <Route path="/linkedlist/circular" element={<CircularLinkedListVisualizer />} /> */}
                             {/* Add more routes for other algorithms here */}
                         </Routes>
                     </div>

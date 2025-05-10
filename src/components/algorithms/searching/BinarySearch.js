@@ -38,13 +38,26 @@ function binarySearchSteps(arr, target) {
     return steps;
 }
 
+const binarySearchCode = `function binarySearch(arr, target) {
+  let l = 0, r = arr.length - 1;
+  while (l <= r) {
+    let mid = Math.floor((l + r) / 2);
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) l = mid + 1;
+    else r = mid - 1;
+  }
+  return -1;
+}`;
+
 export default function BinarySearchVisualizer() {
     const [arraySize, setArraySize] = useState(8);
     const [array, setArray] = useState(getRandomSortedArray(8));
+    const [customInput, setCustomInput] = useState("");
     const [target, setTarget] = useState(array[0]);
     const [steps, setSteps] = useState(binarySearchSteps(array, target));
     const [step, setStep] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [inputError, setInputError] = useState("");
 
     React.useEffect(() => {
         setSteps(binarySearchSteps(array, target));
@@ -57,12 +70,36 @@ export default function BinarySearchVisualizer() {
         setArraySize(size);
         setArray(newArr);
         setTarget(newArr[0]);
+        setCustomInput("");
+        setInputError("");
     };
 
     const handleRandomize = () => {
         const newArr = getRandomSortedArray(arraySize);
         setArray(newArr);
         setTarget(newArr[0]);
+        setCustomInput("");
+        setInputError("");
+    };
+
+    const handleCustomInput = (e) => {
+        setCustomInput(e.target.value);
+        setInputError("");
+    };
+
+    const handleSetCustomArray = () => {
+        const numbers = customInput
+            .split(",")
+            .map(s => Number(s.trim()))
+            .filter(n => !isNaN(n) && n >= 0 && n <= 999);
+        if (numbers.length === 0) {
+            setInputError("Please enter valid numbers (0-999) separated by commas");
+            return;
+        }
+        numbers.sort((a, b) => a - b);
+        setArray(numbers);
+        setTarget(numbers[0]);
+        setInputError("");
     };
 
     const handleTargetChange = (e) => {
@@ -91,28 +128,53 @@ export default function BinarySearchVisualizer() {
                 <div style={{ color: "#219ebc", fontWeight: 500 }}>Blue: Search Range</div>
                 <div style={{ color: "#8bc34a", fontWeight: 500 }}>Green: Found</div>
             </div>
-            <div className="visualizer-controls">
-                <label>
-                    <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+            <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 16 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label>
+                        <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+                        <input
+                            type="number"
+                            min={2}
+                            max={15}
+                            value={arraySize}
+                            onChange={handleArraySizeChange}
+                            disabled={isAnimating}
+                            style={{
+                                width: 50,
+                                borderRadius: 4,
+                                border: "1px solid #bfc0c0",
+                                padding: "4px 8px",
+                                fontSize: "1rem"
+                            }}
+                        />
+                    </label>
+                    <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
+                        Randomize
+                    </button>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
-                        type="number"
-                        min={2}
-                        max={15}
-                        value={arraySize}
-                        onChange={handleArraySizeChange}
+                        type="text"
+                        placeholder="Enter numbers (e.g., 5, 2, 9)"
+                        value={customInput}
+                        onChange={handleCustomInput}
                         disabled={isAnimating}
                         style={{
-                            width: 50,
+                            width: 200,
                             borderRadius: 4,
                             border: "1px solid #bfc0c0",
                             padding: "4px 8px",
                             fontSize: "1rem"
                         }}
                     />
-                </label>
-                <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
-                    Randomize
-                </button>
+                    <button
+                        className="visualizer-btn"
+                        onClick={handleSetCustomArray}
+                        disabled={isAnimating}
+                    >
+                        Set Array
+                    </button>
+                </div>
                 <label style={{ marginLeft: 16, color: "#4a4e69", fontWeight: 500 }}>
                     Target:&nbsp;
                     <input
@@ -137,7 +199,12 @@ export default function BinarySearchVisualizer() {
                     Auto Play
                 </button>
             </div>
-            <div className="visualizer-array">
+            {inputError && (
+                <div style={{ color: "#d32f2f", fontWeight: "bold", margin: "8px 0" }}>
+                    {inputError}
+                </div>
+            )}
+            <div className="visualizer-array" style={{ alignItems: "end", marginBottom: 16 }}>
                 {current.array.map((num, idx) => {
                     let color = "#a3cef1";
                     if (
@@ -150,18 +217,25 @@ export default function BinarySearchVisualizer() {
                     if (idx === current.mid) color = "#ffb703";
                     if (current.found && idx === current.mid) color = "#8bc34a";
                     return (
-                        <div
-                            key={idx}
-                            className="visualizer-bar"
-                            style={{
-                                height: num * 2 + 20,
-                                width: 34,
-                                background: color,
-                                color: "#22223b",
-                                fontSize: "1.1rem"
-                            }}
-                        >
-                            {num}
+                        <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div
+                                className="visualizer-bar"
+                                style={{
+                                    height: num * 2 + 20,
+                                    width: 34,
+                                    background: color,
+                                    color: "#22223b",
+                                    fontSize: "1.1rem",
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    justifyContent: "center",
+                                    borderRadius: 6,
+                                    marginBottom: 2
+                                }}
+                            >
+                                {num}
+                            </div>
+                            <div style={{ color: "#4a4e69", fontSize: 13, fontWeight: 500 }}>{idx}</div>
                         </div>
                     );
                 })}
@@ -195,20 +269,11 @@ export default function BinarySearchVisualizer() {
                     Next
                 </button>
             </div>
-            <div>
-                <h4 style={{ color: "#4a4e69", marginTop: 32, marginBottom: 8 }}>Binary Search (JavaScript)</h4>
-                <pre className="visualizer-code">
-{`function binarySearch(arr, target) {
-  let l = 0, r = arr.length - 1;
-  while (l <= r) {
-    let mid = Math.floor((l + r) / 2);
-    if (arr[mid] === target) return mid;
-    if (arr[mid] < target) l = mid + 1;
-    else r = mid - 1;
-  }
-  return -1;
-}`}
-        </pre>
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Binary Search (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{binarySearchCode}
+                </pre>
             </div>
         </div>
     );

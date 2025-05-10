@@ -103,13 +103,40 @@ function countingSortSteps(arr, order = "asc") {
     return steps;
 }
 
+const countingSortCode = `function countingSort(arr, order = "asc") {
+  let max = Math.max(...arr);
+  let min = Math.min(...arr);
+  let range = max - min + 1;
+  let count = Array(range).fill(0);
+  let output = Array(arr.length).fill(0);
+
+  for (let i = 0; i < arr.length; i++) count[arr[i] - min]++;
+  if (order === "asc") {
+    for (let i = 1; i < range; i++) count[i] += count[i - 1];
+    for (let i = arr.length - 1; i >= 0; i--) {
+      output[count[arr[i] - min] - 1] = arr[i];
+      count[arr[i] - min]--;
+    }
+  } else {
+    for (let i = range - 2; i >= 0; i--) count[i] += count[i + 1];
+    for (let i = 0; i < arr.length; i++) {
+      output[count[arr[i] - min] - 1] = arr[i];
+      count[arr[i] - min]--;
+    }
+  }
+  for (let i = 0; i < arr.length; i++) arr[i] = output[i];
+  return arr;
+}`;
+
 export default function CountingSortVisualizer() {
     const [arraySize, setArraySize] = useState(7);
     const [array, setArray] = useState(getRandomArray(7));
+    const [customInput, setCustomInput] = useState("");
     const [order, setOrder] = useState("asc");
     const [steps, setSteps] = useState(countingSortSteps(array, order));
     const [step, setStep] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [inputError, setInputError] = useState("");
 
     React.useEffect(() => {
         setSteps(countingSortSteps(array, order));
@@ -120,10 +147,32 @@ export default function CountingSortVisualizer() {
         const size = Math.max(2, Math.min(12, Number(e.target.value)));
         setArraySize(size);
         setArray(getRandomArray(size));
+        setCustomInput("");
+        setInputError("");
     };
 
     const handleRandomize = () => {
         setArray(getRandomArray(arraySize));
+        setCustomInput("");
+        setInputError("");
+    };
+
+    const handleCustomInput = (e) => {
+        setCustomInput(e.target.value);
+        setInputError("");
+    };
+
+    const handleSetCustomArray = () => {
+        const numbers = customInput
+            .split(",")
+            .map(s => Number(s.trim()))
+            .filter(n => !isNaN(n) && n >= 0 && n <= 9);
+        if (numbers.length === 0) {
+            setInputError("Please enter valid numbers (0-9) separated by commas");
+            return;
+        }
+        setArray(numbers);
+        setInputError("");
     };
 
     const handleOrderChange = (e) => {
@@ -147,28 +196,53 @@ export default function CountingSortVisualizer() {
             <div className="visualizer-desc">
                 Counting Sort is an integer sorting algorithm that counts the number of occurrences of each value, then calculates positions and builds the sorted array.
             </div>
-            <div className="visualizer-controls">
-                <label>
-                    <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+            <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 16 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label>
+                        <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+                        <input
+                            type="number"
+                            min={2}
+                            max={12}
+                            value={arraySize}
+                            onChange={handleArraySizeChange}
+                            disabled={isAnimating}
+                            style={{
+                                width: 50,
+                                borderRadius: 4,
+                                border: "1px solid #bfc0c0",
+                                padding: "4px 8px",
+                                fontSize: "1rem"
+                            }}
+                        />
+                    </label>
+                    <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
+                        Randomize
+                    </button>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
-                        type="number"
-                        min={2}
-                        max={12}
-                        value={arraySize}
-                        onChange={handleArraySizeChange}
+                        type="text"
+                        placeholder="Enter numbers (e.g., 2, 4, 7)"
+                        value={customInput}
+                        onChange={handleCustomInput}
                         disabled={isAnimating}
                         style={{
-                            width: 50,
+                            width: 200,
                             borderRadius: 4,
                             border: "1px solid #bfc0c0",
                             padding: "4px 8px",
                             fontSize: "1rem"
                         }}
                     />
-                </label>
-                <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
-                    Randomize
-                </button>
+                    <button
+                        className="visualizer-btn"
+                        onClick={handleSetCustomArray}
+                        disabled={isAnimating}
+                    >
+                        Set Array
+                    </button>
+                </div>
                 <label style={{ marginLeft: 16, color: "#4a4e69", fontWeight: 500 }}>
                     Order:&nbsp;
                     <select
@@ -194,24 +268,36 @@ export default function CountingSortVisualizer() {
                     Auto Play
                 </button>
             </div>
-            <div className="visualizer-array">
+            {inputError && (
+                <div style={{ color: "#d32f2f", fontWeight: "bold", margin: "8px 0" }}>
+                    {inputError}
+                </div>
+            )}
+            <div className="visualizer-array" style={{ alignItems: "end", marginBottom: 16 }}>
                 {current.array.map((num, idx) => {
                     let color = "#a3cef1";
                     if (current.highlight === idx) color = "#ffb703";
                     if (step === steps.length - 1) color = "#8bc34a";
                     return (
-                        <div
-                            key={idx}
-                            className="visualizer-bar"
-                            style={{
-                                height: num * 18 + 20,
-                                width: 34,
-                                background: color,
-                                color: "#22223b",
-                                fontSize: "1.1rem"
-                            }}
-                        >
-                            {num}
+                        <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div
+                                className="visualizer-bar"
+                                style={{
+                                    height: num * 18 + 20,
+                                    width: 34,
+                                    background: color,
+                                    color: "#22223b",
+                                    fontSize: "1.1rem",
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    justifyContent: "center",
+                                    borderRadius: 6,
+                                    marginBottom: 2
+                                }}
+                            >
+                                {num}
+                            </div>
+                            <div style={{ color: "#4a4e69", fontSize: 13, fontWeight: 500 }}>{idx}</div>
                         </div>
                     );
                 })}
@@ -274,34 +360,11 @@ export default function CountingSortVisualizer() {
                     Next
                 </button>
             </div>
-            <div>
-                <h4 style={{ color: "#4a4e69", marginTop: 32, marginBottom: 8 }}>Counting Sort (JavaScript)</h4>
-                <pre className="visualizer-code">
-{`function countingSort(arr, order = "asc") {
-  let max = Math.max(...arr);
-  let min = Math.min(...arr);
-  let range = max - min + 1;
-  let count = Array(range).fill(0);
-  let output = Array(arr.length).fill(0);
-
-  for (let i = 0; i < arr.length; i++) count[arr[i] - min]++;
-  if (order === "asc") {
-    for (let i = 1; i < range; i++) count[i] += count[i - 1];
-    for (let i = arr.length - 1; i >= 0; i--) {
-      output[count[arr[i] - min] - 1] = arr[i];
-      count[arr[i] - min]--;
-    }
-  } else {
-    for (let i = range - 2; i >= 0; i--) count[i] += count[i + 1];
-    for (let i = 0; i < arr.length; i++) {
-      output[count[arr[i] - min] - 1] = arr[i];
-      count[arr[i] - min]--;
-    }
-  }
-  for (let i = 0; i < arr.length; i++) arr[i] = output[i];
-  return arr;
-}`}
-        </pre>
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Counting Sort (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{countingSortCode}
+                </pre>
             </div>
         </div>
     );

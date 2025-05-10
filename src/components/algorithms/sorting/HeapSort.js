@@ -222,13 +222,37 @@ function LegendItem({ color, label }) {
     );
 }
 
+const heapSortCode = `function heapSort(arr, order = "asc") {
+  const compare = order === "asc"
+    ? (x, y) => x > y
+    : (x, y) => x < y;
+  let n = arr.length;
+  function heapify(n, i) {
+    let extreme = i, l = 2*i+1, r = 2*i+2;
+    if (l < n && compare(arr[l], arr[extreme])) extreme = l;
+    if (r < n && compare(arr[r], arr[extreme])) extreme = r;
+    if (extreme !== i) {
+      [arr[i], arr[extreme]] = [arr[extreme], arr[i]];
+      heapify(n, extreme);
+    }
+  }
+  for (let i = Math.floor(n/2)-1; i>=0; i--) heapify(n, i);
+  for (let i = n-1; i>0; i--) {
+    [arr[0], arr[i]] = [arr[i], arr[0]];
+    heapify(i, 0);
+  }
+  return arr;
+}`;
+
 export default function HeapSortVisualizer() {
     const [arraySize, setArraySize] = useState(7);
     const [array, setArray] = useState(getRandomArray(7));
+    const [customInput, setCustomInput] = useState("");
     const [order, setOrder] = useState("asc");
     const [steps, setSteps] = useState(heapSortSteps(array, order));
     const [step, setStep] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [inputError, setInputError] = useState("");
 
     React.useEffect(() => {
         setSteps(heapSortSteps(array, order));
@@ -239,10 +263,32 @@ export default function HeapSortVisualizer() {
         const size = Math.max(2, Math.min(10, Number(e.target.value)));
         setArraySize(size);
         setArray(getRandomArray(size));
+        setCustomInput("");
+        setInputError("");
     };
 
     const handleRandomize = () => {
         setArray(getRandomArray(arraySize));
+        setCustomInput("");
+        setInputError("");
+    };
+
+    const handleCustomInput = (e) => {
+        setCustomInput(e.target.value);
+        setInputError("");
+    };
+
+    const handleSetCustomArray = () => {
+        const numbers = customInput
+            .split(",")
+            .map(s => Number(s.trim()))
+            .filter(n => !isNaN(n) && n >= 0 && n <= 99);
+        if (numbers.length === 0) {
+            setInputError("Please enter valid numbers (0-99) separated by commas");
+            return;
+        }
+        setArray(numbers);
+        setInputError("");
     };
 
     const handleOrderChange = (e) => {
@@ -271,28 +317,53 @@ export default function HeapSortVisualizer() {
                 </b>
             </div>
             <Legend />
-            <div className="visualizer-controls">
-                <label>
-                    <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+            <div className="visualizer-controls" style={{ flexWrap: "wrap", gap: 16 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <label>
+                        <span style={{ color: "#4a4e69", fontWeight: 500 }}>Array size:</span>&nbsp;
+                        <input
+                            type="number"
+                            min={2}
+                            max={10}
+                            value={arraySize}
+                            onChange={handleArraySizeChange}
+                            disabled={isAnimating}
+                            style={{
+                                width: 50,
+                                borderRadius: 4,
+                                border: "1px solid #bfc0c0",
+                                padding: "4px 8px",
+                                fontSize: "1rem"
+                            }}
+                        />
+                    </label>
+                    <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
+                        Randomize
+                    </button>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
-                        type="number"
-                        min={2}
-                        max={10}
-                        value={arraySize}
-                        onChange={handleArraySizeChange}
+                        type="text"
+                        placeholder="Enter numbers (e.g., 5, 2, 9)"
+                        value={customInput}
+                        onChange={handleCustomInput}
                         disabled={isAnimating}
                         style={{
-                            width: 50,
+                            width: 200,
                             borderRadius: 4,
                             border: "1px solid #bfc0c0",
                             padding: "4px 8px",
                             fontSize: "1rem"
                         }}
                     />
-                </label>
-                <button className="visualizer-btn" onClick={handleRandomize} disabled={isAnimating}>
-                    Randomize
-                </button>
+                    <button
+                        className="visualizer-btn"
+                        onClick={handleSetCustomArray}
+                        disabled={isAnimating}
+                    >
+                        Set Array
+                    </button>
+                </div>
                 <label style={{ marginLeft: 16, color: "#4a4e69", fontWeight: 500 }}>
                     Order:&nbsp;
                     <select
@@ -318,12 +389,17 @@ export default function HeapSortVisualizer() {
                     Auto Play
                 </button>
             </div>
+            {inputError && (
+                <div style={{ color: "#d32f2f", fontWeight: "bold", margin: "8px 0" }}>
+                    {inputError}
+                </div>
+            )}
             <div style={{ display: "flex", gap: 40, flexWrap: "wrap", justifyContent: "center" }}>
                 <div>
                     <div style={{ textAlign: "center", color: "#4a4e69", fontWeight: 500, marginBottom: 8 }}>
                         Heap as Array
                     </div>
-                    <div className="visualizer-array">
+                    <div className="visualizer-array" style={{ alignItems: "end", marginBottom: 16 }}>
                         {current.array.map((num, idx) => {
                             let color = "#a3cef1";
                             if (idx === current.current) color = "#ffb703";
@@ -333,18 +409,25 @@ export default function HeapSortVisualizer() {
                             if (step === steps.length - 1) color = "#8bc34a";
                             if (current.phase === "extract" && idx >= current.heapSize) color = "#bfc0c0";
                             return (
-                                <div
-                                    key={idx}
-                                    className="visualizer-bar"
-                                    style={{
-                                        height: num * 3 + 20,
-                                        width: 34,
-                                        background: color,
-                                        color: "#22223b",
-                                        fontSize: "1.1rem"
-                                    }}
-                                >
-                                    {num}
+                                <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <div
+                                        className="visualizer-bar"
+                                        style={{
+                                            height: num * 3 + 20,
+                                            width: 34,
+                                            background: color,
+                                            color: "#22223b",
+                                            fontSize: "1.1rem",
+                                            display: "flex",
+                                            alignItems: "flex-end",
+                                            justifyContent: "center",
+                                            borderRadius: 6,
+                                            marginBottom: 2
+                                        }}
+                                    >
+                                        {num}
+                                    </div>
+                                    <div style={{ color: "#4a4e69", fontSize: 13, fontWeight: 500 }}>{idx}</div>
                                 </div>
                             );
                         })}
@@ -379,31 +462,11 @@ export default function HeapSortVisualizer() {
                     Next
                 </button>
             </div>
-            <div>
-                <h4 style={{ color: "#4a4e69", marginTop: 32, marginBottom: 8 }}>Heap Sort (JavaScript)</h4>
-                <pre className="visualizer-code">
-{`function heapSort(arr, order = "asc") {
-  const compare = order === "asc"
-    ? (x, y) => x > y
-    : (x, y) => x < y;
-  let n = arr.length;
-  function heapify(n, i) {
-    let extreme = i, l = 2*i+1, r = 2*i+2;
-    if (l < n && compare(arr[l], arr[extreme])) extreme = l;
-    if (r < n && compare(arr[r], arr[extreme])) extreme = r;
-    if (extreme !== i) {
-      [arr[i], arr[extreme]] = [arr[extreme], arr[i]];
-      heapify(n, extreme);
-    }
-  }
-  for (let i = Math.floor(n/2)-1; i>=0; i--) heapify(n, i);
-  for (let i = n-1; i>0; i--) {
-    [arr[0], arr[i]] = [arr[i], arr[0]];
-    heapify(i, 0);
-  }
-  return arr;
-}`}
-        </pre>
+            <div style={{ marginTop: 32 }}>
+                <h4 style={{ color: "#4a4e69", marginBottom: 8 }}>Heap Sort (JavaScript)</h4>
+                <pre className="visualizer-code" style={{ background: "#232946", color: "#eebbc3", borderRadius: 8, padding: 16, fontSize: 15, overflowX: "auto" }}>
+{heapSortCode}
+                </pre>
             </div>
         </div>
     );
